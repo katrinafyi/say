@@ -26,13 +26,13 @@ fib2 :: Memoisable Identity Integer Integer
 fib2 rec n =
   if n <= 1 then lift $ pure 1 else liftA2 (+) (rec (n - 1)) (rec (n - 2))
 
-fib3
-  :: (MonadTrans t, Monad (t IO))
-  => (Integer -> t IO Integer)
-  -> Integer
-  -> t IO Integer
-fib3 rec n = lift (print n)
-  >> if n <= 1 then lift $ pure 1 else liftA2 (+) (rec (n - 1)) (rec (n - 2))
+fib3 :: Memoisable IO Integer Integer
+fib3 rec n = 
+  lift (print n) >>
+  if n <= 1 then 
+    lift $ pure 1
+  else
+    liftA2 (+) (rec (n - 1)) (rec (n - 2))
 
 
 type Memoised m a b = a -> StateT (Map a b) m b
