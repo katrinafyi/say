@@ -35,7 +35,7 @@ proxyLen (_:xs) =
   Exists p -> Exists (proxyAdd p)
 
 
-proxyLine :: Proxy w -> [a] -> List2 w 1 a
+-- proxyLine :: Proxy w -> [a] -> List2 w 1 a
 
 class ToInt p where 
   toInt :: p -> Int
