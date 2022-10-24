@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Memo where
+module MemoT where
 
 import           Control.Monad.Trans.State.Strict
 import           Data.Function                  ( fix )
@@ -19,14 +19,14 @@ type OpenFun a b = (a -> b) -> a -> b
 fib :: (Integer -> Integer) -> Integer -> Integer
 fib rec n = if n <= 1 then 1 else rec (n - 1) + rec (n - 2)
 
-type Memoisable a b
-  = forall m . Applicative m => OpenFun a (m b)
+type Memoisable m a b
+  = forall t . (MonadTrans t, Monad (t m)) => OpenFun a (t m b)
 
-fib2 :: Memoisable Integer Integer
+fib2 :: Memoisable Identity Integer Integer
 fib2 rec n =
   if n <= 1 then pure 1 else liftA2 (+) (rec (n - 1)) (rec (n - 2))
 
--- fib3 :: Memoisable Integer Integer
+fib3 :: Memoisable IO Integer Integer
 fib3 rec n = 
   lift (print n) >>
   if n <= 1 then 
@@ -35,15 +35,15 @@ fib3 rec n =
     liftA2 (+) (rec (n - 1)) (rec (n - 2))
 
 
-type Memoised a b = a -> State (Map a b) b
+type Memoised m a b = a -> StateT (Map a b) m b
 
-naive :: Memoisable a b -> a -> b
+naive :: (forall m . Memoisable m a b) -> a -> b
 naive f = runIdentity . runIdentityT . fix f
 
-nomemoise :: Memoisable a b -> Memoised a b
+nomemoise :: (Monad m) => Memoisable m a b -> Memoised m a b
 nomemoise f = fix f
 
-memoise :: (Ord a) => Memoisable a b -> Memoised a b
+memoise :: (Monad m, Ord a) => Memoisable m a b -> Memoised m a b
 memoise f a = do
   old <- gets (Map.lookup a)
   maybe compute pure old

@@ -28,6 +28,7 @@ library
       Arrange
       Lib
       Memo
+      MemoT
   other-modules:
       Paths_say
   hs-source-dirs:
