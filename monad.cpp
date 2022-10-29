@@ -1,6 +1,7 @@
 #include <concepts>
 #include <optional>
 #include <iostream>
+#include <functional>
 
 
 
@@ -22,7 +23,7 @@ struct Monad {
     static m<a> mreturn(const a&) = delete;
 
     template <typename a, typename b>
-    static m<b> mbind(const m<a>&, m<b>(*)(const a&)) = delete;
+    static m<b> mbind(const m<a>&, std::function<m<b>(const a&)>) = delete;
 };
 
 template <typename a>
@@ -42,13 +43,13 @@ struct Monad<std::optional> {
     }
 
     template <typename a, typename b>
-    static std::optional<b> mbind(const std::optional<a>& x, std::optional<b>(*f)(const a&)) {
-        return x ? f(x.value) : std::nullopt;
+    static std::optional<b> mbind(const std::optional<a>& x, std::function<std::optional<b>(const a&)> f) {
+        return x ? f(*x) : std::nullopt;
     };
 };
 
 template<template <typename> class f, typename a, typename b>
-concept MonadConcept = requires (const a& x, const f<a>& y, f<b>(*func)(const a&)) {
+concept MonadConcept = requires (const a& x, const f<a>& y, std::function<f<b>(const a&)> func) {
     { Monad<f>::mreturn(x) } -> std::same_as<f<a>>;
     { Monad<f>::mbind(y, func) } -> std::same_as<f<b>>;
 };
@@ -62,8 +63,10 @@ struct Functor {
 
     template <typename a, typename b>
     requires MonadConcept<f, a, b>
-    static f<b> fmap(const f<a>& x, b(*g)(const a&)) {
-        return Monad<f>::mbind(x, [&g](const a& x) -> f<b> { return Monad<f>::mreturn(g(x)); });
+    static f<b> fmap(const f<a>& x, std::function<b(const a&)> g) {
+        auto l = [&g](const a& x) -> f<b> { b y = g(x); return Monad<f>::mreturn(y); };
+        std::function<f<b>(const a&)> aa{l};
+        return Monad<f>::mbind(x, aa);
     };
 };
 
@@ -76,5 +79,6 @@ int main(int argc, char** argv) {
     std::optional<int> a = x.mreturn(10);
 
     std::cout << *a << std::endl;
-    Functor<std::optional>::fmap<int, bool>(a, [](const int& x) { return true; });
+    auto y = Functor<std::optional>::fmap<int, char>(a, [](const int& x) { return 'a'; });
+    std::cout << *y << std::endl;
 }
